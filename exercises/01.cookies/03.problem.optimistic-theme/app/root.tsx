@@ -128,8 +128,8 @@ function Document({
 
 function App() {
 	const data = useLoaderData<typeof loader>()
+	const theme = useTheme()
 	// 🐨 switch this from data.theme to `useTheme()`
-	const theme = data.theme
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
@@ -183,6 +183,17 @@ export default function AppWithProviders() {
 	)
 }
 
+const themeFetcherKey = 'theme-fetcher'
+function useTheme() {
+	const data = useLoaderData<typeof loader>()
+	const themeFetcher = useFetcher<typeof action>({ key: themeFetcherKey })
+	const optimisticTheme = themeFetcher.formData?.get('theme')
+	if (optimisticTheme === 'light' || optimisticTheme === 'dark') {
+		return optimisticTheme
+	}
+	return data.theme
+}
+
 // 🐨 create a useTheme hook here that reads the current theme from useLoaderData
 // and returns it unless there's an ongoing fetcher setting the theme.
 // 🦉 The ThemeSwitch is using useFetcher to make the switch. You can find the
@@ -193,7 +204,7 @@ export default function AppWithProviders() {
 // 'theme' from the fetcher's formData.
 
 function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
-	const fetcher = useFetcher<typeof action>()
+	const fetcher = useFetcher<typeof action>({ key: themeFetcherKey })
 
 	const [form] = useForm({
 		id: 'theme-switch',

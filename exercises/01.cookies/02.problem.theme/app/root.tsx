@@ -37,7 +37,7 @@ import { csrf } from './utils/csrf.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
 import { invariantResponse } from './utils/misc.tsx'
-import { type Theme } from './utils/theme.server.ts'
+import { getTheme, setTheme, type Theme } from './utils/theme.server.ts'
 
 export const links: LinksFunction = () => {
 	return [
@@ -54,7 +54,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json(
 		{
 			username: os.userInfo().username,
-			// 🐨 get the theme from the request's cookie header using the getTheme utility:
+			theme: getTheme(request),
 			ENV: getEnv(),
 			csrfToken,
 			honeyProps,
@@ -85,11 +85,14 @@ export async function action({ request }: DataFunctionArgs) {
 	if (!submission.value) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
+	const { theme } = submission.value
+	const cookieHeader = setTheme(theme)
 	// 🐨 get the theme from the submission.value
 	// 🐨 get the value of the cookie header by calling setTheme with the theme
 
 	const responseInit = {
 		headers: {
+			'set-cookie': cookieHeader,
 			// 🐨 add a 'set-cookie' header to this response and set it to the
 			// serialized cookie:
 		},
@@ -132,7 +135,7 @@ function Document({
 
 function App() {
 	const data = useLoaderData<typeof loader>()
-	const theme = 'light' // 🐨 change this to the value you get from the loader
+	const theme = data.theme // 🐨 change this to the value you get from the loader
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (

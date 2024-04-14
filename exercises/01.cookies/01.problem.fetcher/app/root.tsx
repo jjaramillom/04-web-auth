@@ -15,6 +15,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useFetcher,
 	useLoaderData,
 	useMatches,
 	type MetaFunction,
@@ -85,7 +86,7 @@ export async function action({ request }: DataFunctionArgs) {
 	}
 
 	// 🐨 Uncomment the console.log to test things out:
-	// console.log(submission.value)
+	console.log(submission.value)
 
 	// we'll do stuff with the submission next...
 
@@ -183,6 +184,7 @@ export default function AppWithProviders() {
 
 function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	// 🐨 create a fetcher. 💰 The generic will be <typeof action>
+	const fetcher = useFetcher<typeof action>()
 
 	const [form] = useForm({
 		id: 'theme-switch',
@@ -209,10 +211,17 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 
 	return (
 		// 🐨 change this to a fetcher.Form and set the method as POST
-		<form {...form.props}>
+		<fetcher.Form {...form.props} method="POST">
 			{/* 🐨 add a hidden input for the theme and set its value to nextMode */}
+			<input
+				type="hidden"
+				name="theme"
+				value={mode === 'light' ? 'dark' : 'light'}
+			/>
 			<div className="flex gap-2">
 				<button
+					name="intent"
+					value="update-theme"
 					// 🐨 set the name to "intent" and the value to "update-theme"
 					type="submit"
 					className="flex h-8 w-8 cursor-pointer items-center justify-center"
@@ -221,7 +230,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 				</button>
 			</div>
 			<ErrorList errors={form.errors} id={form.errorId} />
-		</form>
+		</fetcher.Form>
 	)
 }
 
