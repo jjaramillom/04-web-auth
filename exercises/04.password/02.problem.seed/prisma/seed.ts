@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 import { promiseHash } from 'remix-utils/promise'
 import { createUser } from '#tests/db-utils.ts'
 
@@ -87,6 +88,11 @@ async function seed() {
 				select: { id: true },
 				data: {
 					...userData,
+					password: {
+						create: {
+							hash: bcrypt.hashSync(userData.username, 10),
+						},
+					},
 					// 🐨 add a password here
 					// 💰 to make it easy to login as users, you can set the password to
 					// the username. Obviously this isn't secure, but this is test data 🤷‍♂️
@@ -159,7 +165,11 @@ async function seed() {
 			username: 'kody',
 			name: 'Kody',
 			image: { create: kodyImages.kodyUser },
-			// 🐨 add a password "kodylovesyou" here
+			password: {
+				create: {
+					hash: bcrypt.hashSync('kodylovesyou', 10),
+				},
+			},
 			notes: {
 				create: [
 					{
