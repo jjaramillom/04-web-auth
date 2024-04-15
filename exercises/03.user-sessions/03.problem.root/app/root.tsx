@@ -37,6 +37,7 @@ import { KCDShop } from './kcdshop.tsx'
 import fontStylestylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 import { csrf } from './utils/csrf.server.ts'
+import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
 import {
@@ -44,6 +45,7 @@ import {
 	getUserImgSrc,
 	invariantResponse,
 } from './utils/misc.tsx'
+import { sessionStorage } from './utils/session.server.ts'
 import { getTheme, setTheme, type Theme } from './utils/theme.server.ts'
 import { getToast, type Toast } from './utils/toast.server.ts'
 
@@ -60,6 +62,26 @@ export async function loader({ request }: DataFunctionArgs) {
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 	const honeyProps = honeypot.getInputProps()
 	const { toast, headers: toastHeaders } = await getToast(request)
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const userId = cookieSession.get('userId')
+	let user = userId
+		? await prisma.user.findFirst({
+				where: { id: userId },
+				select: {
+					id: true,
+					username: true,
+					name: true,
+					image: {
+						select: {
+							id: true,
+						},
+					},
+				},
+			})
+		: null
+
 	// 🐨 get the cookie session from the request
 	// 🐨 get the userId from the cookie session
 	// 🐨 if there's a userId, then get the user from the database
@@ -68,6 +90,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json(
 		{
 			username: os.userInfo().username,
+			user,
 			// 🐨 add the user here (if there was no userId then the user can be null)
 			// 💰 don't forget to update the component below to access the user from the data.
 			theme: getTheme(request),
@@ -150,7 +173,7 @@ function Document({
 function App() {
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
-	const user = null as any // 🐨 change "null as any" to data.user
+	const user = data.user
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
