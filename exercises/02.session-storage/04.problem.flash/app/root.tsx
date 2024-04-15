@@ -59,8 +59,6 @@ export async function loader({ request }: DataFunctionArgs) {
 		request.headers.get('cookie'),
 	)
 	const toast = toastCookieSession.get('toast')
-	// 💣 remove this because it's now auto-unset when you call "get"
-	toastCookieSession.unset('toast')
 	return json(
 		{
 			username: os.userInfo().username,

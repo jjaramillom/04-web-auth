@@ -39,7 +39,7 @@ import tailwindStylesheetUrl from './styles/tailwind.css'
 import { csrf } from './utils/csrf.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
-import { invariantResponse } from './utils/misc.tsx'
+import { combineHeaders, invariantResponse } from './utils/misc.tsx'
 import { getTheme, setTheme, type Theme } from './utils/theme.server.ts'
 import { toastSessionStorage } from './utils/toast.server.ts'
 
@@ -60,6 +60,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	)
 	const toast = toastCookieSession.get('toast')
 	// 🐨 unset the toast from the session here
+	toastCookieSession.unset('toast')
 	return json(
 		{
 			username: os.userInfo().username,
@@ -72,7 +73,13 @@ export async function loader({ request }: DataFunctionArgs) {
 		{
 			// 🐨 use "combineHeaders" to add another 'set-cookie' header and commit
 			// the session change here
-			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+			headers: combineHeaders(
+				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+				{
+					'set-cookie':
+						await toastSessionStorage.commitSession(toastCookieSession),
+				},
+			),
 		},
 	)
 }

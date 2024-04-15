@@ -24,6 +24,7 @@ import {
 	invariantResponse,
 	useIsPending,
 } from '#app/utils/misc.tsx'
+import { toastSessionStorage } from '#app/utils/toast.server.ts'
 import { type loader as notesLoader } from './notes.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -83,6 +84,13 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	await prisma.note.delete({ where: { id: note.id } })
 
+	const cookieHeader = request.headers.get('cookie')
+	const toastSession = await toastSessionStorage.getSession(cookieHeader)
+	toastSession.set('toast', {
+		type: 'success',
+		title: 'Note deleted',
+		description: 'Your note has been deleted',
+	})
 	// 🐨 get the cookie header from the request
 	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
 	// 🐨 set a 'toast' value on the session with the following toast object:
@@ -93,8 +101,11 @@ export async function action({ request, params }: DataFunctionArgs) {
 	// }
 
 	return redirect(`/users/${note.owner.username}/notes`, {
-		// 🐨 add a headers object here with a 'set-cookie' property
-		// 🐨 use await toastSessionStorage.commitSession to get the cookie header
+		headers: {
+			'set-cookie': await toastSessionStorage.commitSession(toastSession),
+			// 🐨 add a headers object here with a 'set-cookie' property
+			// 🐨 use await toastSessionStorage.commitSession to get the cookie header
+		},
 	})
 }
 
