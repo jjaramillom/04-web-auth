@@ -14,7 +14,7 @@ import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList, Field } from '#app/components/forms.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-// 🐨 import bcrypt from #app/utils/auth.server.ts
+import { bcrypt } from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
@@ -37,11 +37,18 @@ export async function action({ request }: DataFunctionArgs) {
 				if (intent !== 'submit') return { ...data, user: null }
 
 				const user = await prisma.user.findUnique({
-					// 🐨 include the password hash in this select
-					select: { id: true },
+					select: { id: true, password: { select: { hash: true } } },
 					where: { username: data.username },
 				})
 				if (!user) {
+					ctx.addIssue({
+						code: 'custom',
+						message: 'Invalid username or password',
+					})
+					return z.NEVER
+				}
+
+				if (!(await bcrypt.compare(data.password, user.password!.hash))) {
 					ctx.addIssue({
 						code: 'custom',
 						message: 'Invalid username or password',
@@ -54,7 +61,8 @@ export async function action({ request }: DataFunctionArgs) {
 				// 🐨 if it's not valid, then create the same error as above and return z.NEVER
 
 				// 🐨 don't return the password hash here, just make a user which is an object with an id
-				return { ...data, user }
+				const { password, ...userWithoutPassword } = user
+				return { ...data, user: userWithoutPassword }
 			}),
 		async: true,
 	})
