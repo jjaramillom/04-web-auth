@@ -4,6 +4,7 @@ import { parse } from '@conform-to/zod'
 import { cssBundleHref } from '@remix-run/css-bundle'
 import {
 	json,
+	redirect,
 	type DataFunctionArgs,
 	type LinksFunction,
 } from '@remix-run/node'
@@ -80,6 +81,13 @@ export async function loader({ request }: DataFunctionArgs) {
 		: null
 	// 🐨 if there's a userId but no user then something's wrong.
 	// Let's delete destroy the session and redirect to the home page.
+	if (userId && !user) {
+		throw redirect('/', {
+			headers: {
+				'set-cookie': await sessionStorage.destroySession(cookieSession),
+			},
+		})
+	}
 	return json(
 		{
 			username: os.userInfo().username,

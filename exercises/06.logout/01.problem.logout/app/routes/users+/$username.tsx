@@ -64,7 +64,7 @@ export default function ProfileRoute() {
 					</p>
 					{isLoggedInUser ? (
 						// 🐨 add a method of POST and an action of "/logout" to this form
-						<Form className="mt-3">
+						<Form className="mt-3" method='POST' action='/logout'>
 							{/* 🐨 render the AuthenticityTokenInput from remix-utils */}
 							<Button type="submit" variant="link" size="pill">
 								<Icon name="exit" className="scale-125 max-md:scale-150">

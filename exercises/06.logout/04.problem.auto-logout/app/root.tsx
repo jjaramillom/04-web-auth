@@ -20,7 +20,9 @@ import {
 	useFetcher,
 	useFetchers,
 	useLoaderData,
+	useLocation,
 	useMatches,
+	useSubmit,
 	type MetaFunction,
 } from '@remix-run/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -149,11 +151,13 @@ export async function action({ request }: DataFunctionArgs) {
 function Document({
 	children,
 	theme,
-	env, // 🐨 add an isLoggedIn boolean that defaults to false
+	env,
+	isLoggedIn = false, // 🐨 add an isLoggedIn boolean that defaults to false
 }: {
 	children: React.ReactNode
 	theme?: Theme
 	env?: Record<string, string>
+	isLoggedIn?: boolean
 	// 🐨 add the type for isLoggedIn:
 }) {
 	return (
@@ -171,6 +175,7 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
+				{isLoggedIn ? <LogoutTimer /> : null}
 				{/* 🐨 if isLoggedIn is true, then render the LogoutTimer */}
 				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
@@ -190,7 +195,7 @@ function App() {
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
 		// 🐨 pass isLoggedIn (true if the user exists, false if not)
-		<Document theme={theme} env={data.ENV}>
+		<Document theme={theme} env={data.ENV} isLoggedIn={!!user}>
 			<header className="container px-6 py-4 sm:px-8 sm:py-6">
 				<nav className="flex items-center justify-between gap-4 sm:gap-6">
 					<Link to="/">
@@ -318,10 +323,11 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	)
 }
 
-// 💣 you can remove this eslint line once you've rendered the LogoutTimer
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LogoutTimer() {
 	const [status, setStatus] = useState<'idle' | 'show-modal'>('idle')
+	const location = useLocation()
+	const submit = useSubmit()
+
 	// 🐨 bring in the location via useLocation so we can access location.key
 	// 🐨 get a submit function via useSubmit
 	// 🦉 normally you'd want these numbers to be much higher, but for the purpose
@@ -334,15 +340,13 @@ function LogoutTimer() {
 	const modalTimer = useRef<ReturnType<typeof setTimeout>>()
 	const logoutTimer = useRef<ReturnType<typeof setTimeout>>()
 
-	const logout = useCallback(
-		() => {
-			// 🐨 call submit in here. The submit body can be null,
-			// but the requestInit should be method POST and action '/logout'
-		},
-		[
-			// 🐨 don't forget to include submit here in your dependencies!
-		],
-	)
+	const logout = useCallback(() => {
+		submit(null, { action: '/logout', method: 'POST' })
+		// 🐨 call submit in here. The submit body can be null,
+		// but the requestInit should be method POST and action '/logout'
+	}, [submit])
+
+	useEffect(() => {}, [location.key])
 
 	const cleanupTimers = useCallback(() => {
 		clearTimeout(modalTimer.current)
@@ -361,6 +365,7 @@ function LogoutTimer() {
 		() => resetTimers(),
 		[
 			resetTimers,
+			location.key,
 			// 🐨 whenever the location changes, we want to reset the timers, so you
 			// can add location.key to this array:
 		],

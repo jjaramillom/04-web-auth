@@ -13,7 +13,7 @@ import { z } from 'zod'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { bcrypt } from '#app/utils/auth.server.ts'
+import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
@@ -102,13 +102,18 @@ export async function action({ request }: DataFunctionArgs) {
 		request.headers.get('cookie'),
 	)
 	cookieSession.set('userId', user.id)
+	let expires = submission.value.remember
+		? getSessionExpirationDate()
+		: undefined
 
 	return redirect('/', {
 		headers: {
 			// 🐨 add an expires option to this commitSession call and set it to
 			// a date 30 days in the future if they checked the remember checkbox
 			// or undefined if they did not.
-			'set-cookie': await sessionStorage.commitSession(cookieSession),
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires,
+			}),
 		},
 	})
 }
