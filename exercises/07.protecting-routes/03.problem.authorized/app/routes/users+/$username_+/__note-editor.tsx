@@ -29,9 +29,15 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { Label } from '#app/components/ui/label.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
+import { requireUser } from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { cn, getNoteImgSrc, useIsPending } from '#app/utils/misc.tsx'
+import {
+	cn,
+	getNoteImgSrc,
+	invariantResponse,
+	useIsPending,
+} from '#app/utils/misc.tsx'
 
 const titleMinLength = 1
 const titleMaxLength = 100
@@ -73,6 +79,10 @@ const NoteEditorSchema = z.object({
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'No access granted', {
+		status: 403,
+	})
 	// 🐨 require the user and check that the user.username is equal to params.username.
 	// If not, then throw a 403 response
 	// 💰 you can use invariantResponse for this.
@@ -231,7 +241,7 @@ export function NoteEditor({
 									className="relative border-b-2 border-muted-foreground"
 								>
 									<button
-										className="text-foreground-destructive absolute right-0 top-0"
+										className="absolute right-0 top-0 text-foreground-destructive"
 										{...list.remove(fields.images.name, { index })}
 									>
 										<span aria-hidden>

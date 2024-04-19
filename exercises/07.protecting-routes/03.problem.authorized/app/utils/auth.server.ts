@@ -43,6 +43,24 @@ export async function requireAnonymous(request: Request) {
 	}
 }
 
+export async function requireUser(request: Request) {
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const userId = cookieSession.get(userIdKey)
+	if (!userId) {
+		throw redirect('/login')
+	}
+	const user = await prisma.user.findUnique({
+		select: { id: true, username: true },
+		where: { id: userId },
+	})
+	if (!user) {
+		throw await logout({ request })
+	}
+	return user
+}
+
 // 🐨 create a requireUser utility here which should get the userId
 // 🐨 query for the user's id and username.
 // 🐨 If the user doesn't exist, log the user out with the logout utility.

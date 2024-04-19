@@ -17,6 +17,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	getSessionExpirationDate,
 	login,
+	requireAnonymous,
 	userIdKey,
 } from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
@@ -31,10 +32,16 @@ const LoginFormSchema = z.object({
 	remember: z.boolean().optional(),
 })
 
+export async function loader({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
+	return json({})
+}
+
 // 🐨 create a loader here that uses the requireAnonymous utility and returns
 // an empty object of json.
 
 export async function action({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
 	// 🐨 add the requireAnonymous utility here
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)

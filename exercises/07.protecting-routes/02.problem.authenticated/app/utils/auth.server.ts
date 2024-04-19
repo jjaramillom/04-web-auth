@@ -28,6 +28,14 @@ export async function getUserId(request: Request) {
 	return user.id
 }
 
+export async function requireUserId(request: Request) {
+	const userId = await getUserId(request)
+	if (!userId) {
+		throw redirect('/')
+	}
+	return userId
+}
+
 // 🐨 export a requireUserId function here that looks a lot like the requireAnonymous
 // except it returns the userId if it exists and throws a redirect to the login page
 // if no userId exists in the session.

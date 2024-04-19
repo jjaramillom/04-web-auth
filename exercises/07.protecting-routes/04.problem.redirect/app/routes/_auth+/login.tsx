@@ -6,9 +6,10 @@ import {
 	type DataFunctionArgs,
 	type MetaFunction,
 } from '@remix-run/node'
-import { Form, Link, useActionData } from '@remix-run/react'
+import { Form, Link, useActionData, useSearchParams } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { safeRedirect } from 'remix-utils/safe-redirect'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
@@ -29,7 +30,7 @@ import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation.ts'
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
 	password: PasswordSchema,
-	// 🐨 add config for a redirectTo (optional string)
+	redirectTo: z.string().optional(),
 	remember: z.boolean().optional(),
 })
 
@@ -73,17 +74,14 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// 🐨 get the redirectTo from the submission
-	const { user, remember } = submission.value
+	const { user, remember, redirectTo } = submission.value
 
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
 	cookieSession.set(userIdKey, user.id)
 
-	// 🐨 redirect to the redirectTo
-	// 🦉 Make sure to use the safeRedirect utility from remix-utils
-	return redirect('/', {
+	return redirect(safeRedirect(redirectTo), {
 		headers: {
 			'set-cookie': await sessionStorage.commitSession(cookieSession, {
 				expires: remember ? getSessionExpirationDate() : undefined,
@@ -95,13 +93,13 @@ export async function action({ request }: DataFunctionArgs) {
 export default function LoginPage() {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
-	// 🐨 get the search params via useSearchParams from @remix-run/react
-	// 🐨 get the redirectTo from the search params
+	const [urlSearchParams] = useSearchParams()
+	const redirectTo = urlSearchParams.get('redirectTo')
 
 	const [form, fields] = useForm({
 		id: 'login-form',
 		constraint: getFieldsetConstraint(LoginFormSchema),
-		// 🐨 add a defaultValue object with the redirectTo
+		defaultValue: { redirectTo },
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
 			return parse(formData, { schema: LoginFormSchema })
@@ -164,7 +162,9 @@ export default function LoginPage() {
 								</div>
 							</div>
 
-							{/* 🐨 add a hidden input here for the redirectTo */}
+							<input
+								{...conform.input(fields.redirectTo, { type: 'hidden' })}
+							/>
 
 							<ErrorList errors={form.errors} id={form.errorId} />
 
@@ -182,7 +182,15 @@ export default function LoginPage() {
 						<div className="flex items-center justify-center gap-2 pt-6">
 							<span className="text-muted-foreground">New here?</span>
 							{/* 🐨 update this to attribute to include the redirectTo if it exists */}
-							<Link to="/signup">Create an account</Link>
+							<Link
+								to={
+									redirectTo
+										? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
+										: '/signup'
+								}
+							>
+								Create an account
+							</Link>
 						</div>
 					</div>
 				</div>

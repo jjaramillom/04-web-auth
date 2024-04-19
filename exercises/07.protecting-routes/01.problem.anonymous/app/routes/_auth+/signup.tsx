@@ -15,6 +15,7 @@ import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	getSessionExpirationDate,
+	requireAnonymous,
 	signup,
 	userIdKey,
 } from '#app/utils/auth.server.ts'
@@ -57,6 +58,7 @@ const SignupFormSchema = z
 // an empty object of json.
 
 export async function action({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
 	// 🐨 add the requireAnonymous utility here
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
