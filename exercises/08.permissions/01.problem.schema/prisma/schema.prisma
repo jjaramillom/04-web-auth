@@ -19,10 +19,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image    UserImage?
-  password Password?
-  notes    Note[]
+  image      UserImage?
+  password   Password?
+  notes      Note[]
   // 🐨 once you have the roles model, add a "roles" property that's an array of Roles
+  Permission Permission[]
+  Role       Role?        @relation(fields: [roleId], references: [id])
+  roleId     String?
 }
 
 model Note {
@@ -80,6 +83,21 @@ model Password {
   userId String @unique
 }
 
+model Permission {
+  id          String   @id @unique @default(uuid())
+  action      String
+  entity      String
+  access      String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  roles       Role[]
+  User        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+
+  @@unique([action, entity, access])
+}
+
 // 🐨 add a Permission model that has the following properties:
 // - id (as usual)
 // - action - a required string (will be one of create, read, update, delete)
@@ -91,6 +109,16 @@ model Password {
 // - roles - an array of Roles
 // @@unique constraint of action, entity, and access
 // 📜 https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#unique-1
+
+model Role {
+  id          String       @id @unique @default(uuid())
+  name        String
+  description String       @default("")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  permissions Permission[]
+  users       User[]
+}
 
 // 🐨 add a Role model that has an
 // - id (as usual)

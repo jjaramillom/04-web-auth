@@ -46,6 +46,7 @@ import {
 	getUserImgSrc,
 	invariantResponse,
 } from './utils/misc.tsx'
+import { userHasRole } from './utils/permissions.ts'
 import { getTheme, setTheme, type Theme } from './utils/theme.server.ts'
 import { getToast, type Toast } from './utils/toast.server.ts'
 import { useOptionalUser } from './utils/user.ts'
@@ -71,6 +72,14 @@ export async function loader({ request }: DataFunctionArgs) {
 					name: true,
 					username: true,
 					image: { select: { id: true } },
+					roles: {
+						select: {
+							name: true,
+							permissions: {
+								select: { action: true, entity: true, access: true },
+							},
+						},
+					},
 					// 🐨 add roles and permissions to the query here. You should get the
 					// roles' names, and the permissions' action, entity, and access attributes.
 				},
@@ -163,8 +172,7 @@ function App() {
 	const theme = useTheme()
 	const user = useOptionalUser()
 	const matches = useMatches()
-	// 🐨 use the userHasRole utility to determine if the user is an admin
-	const userIsAdmin = false
+	const userIsAdmin = userHasRole(user, 'admin')
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
 		<Document theme={theme} env={data.ENV}>

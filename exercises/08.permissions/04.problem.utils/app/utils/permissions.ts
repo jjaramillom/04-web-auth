@@ -77,16 +77,13 @@ function parsePermissionString(permissionString: PermissionString) {
 }
 
 export function userHasPermission(
-	// @ts-ignore 💣 remove this comment
 	user: Pick<ReturnType<typeof useUser>, 'roles'> | null,
 	permission: PermissionString,
 ) {
 	if (!user) return false
 	const { action, entity, access } = parsePermissionString(permission)
-	// @ts-ignore 💣 remove this comment
 	return user.roles.some(role =>
 		role.permissions.some(
-			// @ts-ignore 💣 remove this comment
 			permission =>
 				permission.entity === entity &&
 				permission.action === action &&
@@ -96,11 +93,9 @@ export function userHasPermission(
 }
 
 export function userHasRole(
-	// @ts-ignore 💣 remove this comment
 	user: Pick<ReturnType<typeof useUser>, 'roles'> | null,
 	role: string,
 ) {
 	if (!user) return false
-	// @ts-ignore 💣 remove this comment
 	return user.roles.some(r => r.name === role)
 }
