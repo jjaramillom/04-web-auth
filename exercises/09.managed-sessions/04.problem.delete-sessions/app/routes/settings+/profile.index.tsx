@@ -8,7 +8,10 @@ import { ErrorList, Field } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { requireUserId } from '#app/utils/auth.server.ts'
+import {
+	requireUserId,
+	sessionKey,
+} from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
@@ -16,6 +19,7 @@ import {
 	invariantResponse,
 	useDoubleCheck,
 } from '#app/utils/misc.tsx'
+import { sessionStorage } from '#app/utils/session.server.ts'
 import {
 	EmailSchema,
 	NameSchema,
@@ -40,13 +44,23 @@ export async function loader({ request }: DataFunctionArgs) {
 			image: {
 				select: { id: true },
 			},
+			_count: {
+				select: {
+					sessions: {
+						where: {
+							expirationDate: {
+								gt: new Date(),
+							},
+						},
+					},
+				},
+			},
 			// 🐨 add a count of the number of sessions for this user
 			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#select-a-_count-of-relations
 			// 💰 also only select those which have not yet expired!
 			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
 		},
 	})
-
 	invariantResponse(user, 'User not found', { status: 404 })
 
 	return json({ user })
@@ -252,6 +266,12 @@ function UpdateProfile() {
 }
 
 async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
+	const sessionId = (
+		await sessionStorage.getSession(request.headers.get('cookie'))
+	).get(sessionKey)
+	prisma.session.deleteMany({
+		where: { NOT: { id: sessionId } },
+	})
 	// 🐨 get the sessionId from the cookieSession (you'll need to use getSession for this)
 	// 🐨 delete all the sessions that are not the current session
 	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
@@ -260,10 +280,11 @@ async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
 
 function SignOutOfSessions() {
 	// 🐨 get the loader data using useLoaderData
+	const data = useLoaderData<typeof loader>()
 	const dc = useDoubleCheck()
 
 	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
-	const otherSessionsCount = 0 // 🐨 this should be the count of sessions minus 1
+	const otherSessionsCount = data.user._count.sessions - 1 // 🐨 this should be the count of sessions minus 1
 	return (
 		<div>
 			{otherSessionsCount ? (

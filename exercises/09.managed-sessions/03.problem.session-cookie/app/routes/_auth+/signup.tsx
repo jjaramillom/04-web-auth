@@ -15,10 +15,9 @@ import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
-	getSessionExpirationDate,
 	requireAnonymous,
 	signup,
-	userIdKey,
+	sessionKey,
 } from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -82,9 +81,9 @@ export async function action({ request }: DataFunctionArgs) {
 			}
 		}).transform(async data => {
 			// 🐨 this is a session now
-			const user = await signup(data)
+			const session = await signup(data)
 			// 🐨 this should be a session not a user
-			return { ...data, user }
+			return { ...data, session }
 		}),
 		async: true,
 	})
@@ -93,25 +92,25 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'idle', submission } as const)
 	}
 	// 🐨 this is a session now, not a user
-	if (!submission.value?.user) {
+	if (!submission.value?.session) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
 	// 🐨 this is a session, not a user
-	const { user, remember, redirectTo } = submission.value
+	const { session, remember, redirectTo } = submission.value
 
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
 	// 🐨 this is a sessionKey and session, not a userIdKey and user
-	cookieSession.set(userIdKey, user.id)
+	cookieSession.set(sessionKey, session.id)
 
 	return redirect(safeRedirect(redirectTo), {
 		headers: {
 			'set-cookie': await sessionStorage.commitSession(cookieSession, {
 				// 🐨 the expiration date is now available on the session and doesn't
 				// need to be computed here.
-				expires: remember ? getSessionExpirationDate() : undefined,
+				expires: remember ? session.expirationDate : undefined,
 			}),
 		},
 	})
